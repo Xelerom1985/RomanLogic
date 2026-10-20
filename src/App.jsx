@@ -177,12 +177,9 @@ function Hero({ config, fecha, estado, refrescar }) {
         {estado === 'cargando' ? 'Actualizando…' : '↻ Actualizar'}
       </button>
       <div className="relative flex flex-col items-center px-6 pt-10 pb-7 text-center">
-        <img src="/marcas/roman-logic.webp" alt="ROMÁN Logic" className="h-28 w-28 drop-shadow-[0_6px_20px_rgba(0,0,0,0.6)]" />
-        <h1 className="mt-2 text-2xl font-black tracking-tight text-white drop-shadow">
-          Distribución <span className="text-[var(--accent)]">ROMÁN</span> Logic
-        </h1>
-        <p className="text-sm font-medium italic text-white/85">{config.slogan}</p>
-        <p className="mt-2 max-w-xs text-[13px] leading-snug text-white/75">
+        <img src="/img/logo.webp" alt="" className="h-48 w-48 rounded-[28px] shadow-[0_8px_30px_rgba(0,0,0,0.7)] ring-1 ring-[var(--accent)]/40" />
+        <h1 className="sr-only">{config.negocio} — {config.slogan}</h1>
+        <p className="mt-3 max-w-xs text-[13px] leading-snug text-white/80">
           Hamburguesas, panchos, papas, quesos y todo para tu negocio gastronómico.
         </p>
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
@@ -317,7 +314,7 @@ function Pie({ config, fecha, actualizado }) {
         </table>
       )}
       <div className="space-y-0.5">
-        <img src="/marcas/roman-logic.webp" alt="" className="mx-auto mb-1 h-12 w-12 opacity-80" />
+        <img src="/img/logo.webp" alt="" className="mx-auto mb-1 h-20 w-20 rounded-2xl" />
         {fecha && <p className="text-[var(--text)]">{fecha}</p>}
         <p>{config.aviso}</p>
         <p>Actualizado: {new Date(actualizado).toLocaleString('es-AR')}</p>
