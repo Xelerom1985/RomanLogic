@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CATEGORIAS, DEFAULT_CONFIG, loadCached, loadData, money, normalize } from './data.js'
 import { TAGLINES, fotoCategoria, logosDe, nombreLogo } from './brands.js'
+import { agrupar, opcionesSubfiltro, subfiltroDe } from './catalogo.js'
 
 const LISTAS = ['Minorista', 'Mayorista']
 const CART_KEY = 'roman-logic-pedido-v1'
@@ -17,6 +18,7 @@ export default function App() {
   const [lista, setLista] = useState(() => store.get(LISTA_KEY, 'Minorista'))
   const [cat, setCat] = useState('Todas')
   const [marca, setMarca] = useState(null) // ruta del logo seleccionado
+  const [sub, setSub] = useState(null) // subfiltro dentro de la categoría (ej. Chicas)
   const [q, setQ] = useState('')
   const [cart, setCart] = useState(() => store.get(CART_KEY, {}))
   const [verPedido, setVerPedido] = useState(false)
@@ -56,22 +58,25 @@ export default function App() {
   }, [deLista])
   useEffect(() => { if (cat !== 'Todas' && !cats.includes(cat)) setCat('Todas') }, [cats, cat])
   useEffect(() => { if (marca && !marcas.includes(marca)) setMarca(null) }, [marcas, marca])
+  useEffect(() => setSub(null), [cat, lista])
+  const subOpciones = useMemo(() => (cat === 'Todas' ? [] : opcionesSubfiltro(cat, deLista)), [cat, deLista])
 
   const visibles = useMemo(() => {
     const words = normalize(q).split(/\s+/).filter(Boolean)
     return deLista.filter((p) => {
       if (cat !== 'Todas' && p.categoria !== cat) return false
       if (marca && !logosDe(p.marca).includes(marca)) return false
+      if (sub && subfiltroDe(p) !== sub) return false
       if (!words.length) return true
       const hay = normalize([p.producto, p.marca, p.detalle, p.categoria, ...p.variantes.map((v) => v.nombre)].join(' '))
       return words.every((w) => hay.includes(w))
     })
-  }, [deLista, cat, marca, q])
+  }, [deLista, cat, marca, sub, q])
 
   const grupos = useMemo(() => {
     const m = new Map()
     for (const p of visibles) { if (!m.has(p.categoria)) m.set(p.categoria, []); m.get(p.categoria).push(p) }
-    return [...m.entries()]
+    return [...m.entries()].map(([c, prods]) => [c, prods, agrupar(prods)])
   }, [visibles])
 
   const setQty = (p, v, qty) => setCart((c) => {
@@ -112,6 +117,17 @@ export default function App() {
             </button>
           ))}
         </div>
+        {subOpciones.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {[{ nombre: null }, ...subOpciones].map((o) => (
+              <button key={o.nombre || 'todos'} onClick={() => setSub(o.nombre)}
+                className={`flex-1 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold ${sub === o.nombre
+                  ? 'bg-[var(--accent)] text-black' : 'bg-[var(--bg2)] text-[var(--muted)] ring-1 ring-[var(--line)]'}`}>
+                {o.nombre || 'Todos'}
+              </button>
+            ))}
+          </div>
+        )}
         {marca && (
           <button onClick={() => setMarca(null)}
             className="mt-1.5 flex items-center gap-2 rounded-full bg-white py-0.5 pr-3 pl-1 text-xs font-semibold text-black">
@@ -143,11 +159,13 @@ export default function App() {
 
       <main className="px-4">
         {data && !visibles.length && <p className="mt-10 text-center text-sm text-[var(--muted)]">No hay productos para “{q}”.</p>}
-        {grupos.map(([c, prods]) => (
+        {grupos.map(([c, prods, items]) => (
           <section key={c} className="mt-6">
             <BannerCategoria cat={c} n={prods.length} />
             <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
-              {prods.map((p) => <Producto key={p.key} p={p} cart={cart} setQty={setQty} />)}
+              {items.map((it) => it.tipo === 'grupo'
+                ? <Grupo key={it.key} g={it} cart={cart} setQty={setQty} />
+                : <Producto key={it.p.key} p={it.p} cart={cart} setQty={setQty} />)}
             </div>
           </section>
         ))}
@@ -334,6 +352,63 @@ function Producto({ p, cart, setQty }) {
   )
 }
 
+function Grupo({ g, cart, setQty }) {
+  const logo = logosDe(g.marca)[0]
+  const varDe = (f, col) => (g.unaSola ? f.p.variantes[0] : f.p.variantes.find((v) => v.nombre === col))
+  return (
+    <article className={`rounded-2xl border border-[var(--line)] bg-[var(--card)] p-3 sm:col-span-2 ${g.stock === 'sin' ? 'opacity-55 grayscale-[60%]' : ''}`}>
+      <div className="flex items-center gap-3">
+        {logo
+          ? <div className="flex h-12 w-16 shrink-0 items-center justify-center rounded-xl bg-white p-1.5"><img src={logo} alt={g.marca} loading="lazy" className="max-h-full max-w-full object-contain" /></div>
+          : <img src={fotoCategoria(g.categoria)} alt="" loading="lazy" className="h-12 w-16 shrink-0 rounded-xl object-cover" />}
+        <div className="min-w-0">
+          {g.stock === 'sin' && <span className="mb-0.5 inline-block rounded-md bg-red-600 px-2 py-0.5 text-[11px] font-bold uppercase text-white">Sin stock</span>}
+          <h3 className="text-[15px] font-semibold leading-snug">{g.titulo}</h3>
+          {(g.marca || g.detalle) && <p className="text-xs text-[var(--muted)]">{[g.marca, g.detalle].filter(Boolean).join(' · ')}</p>}
+        </div>
+      </div>
+      <table className="mt-2 w-full table-fixed text-sm">
+        <thead>
+          <tr className="text-[11px] text-[var(--muted)]">
+            <th className="w-[22%] pb-1 text-left font-medium">Cantidad</th>
+            {g.columnas.map((c) => <th key={c} className="pb-1 text-center font-medium">{c}</th>)}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-[var(--line)]">
+          {g.filas.map((f) => (
+            <tr key={f.p.key}>
+              <td className="py-1.5 align-middle">
+                <span className="font-bold">{f.label}</span>
+                {g.detallePorFila && f.p.detalle && <span className="block text-[10px] text-[var(--muted)]">{f.p.detalle}</span>}
+              </td>
+              {g.columnas.map((c) => {
+                const v = varDe(f, c)
+                if (!v) return <td key={c} className="text-center text-[var(--muted)]">—</td>
+                const qty = cart[v.id]?.qty || 0
+                return (
+                  <td key={c} className="px-0.5 py-1.5 text-center align-middle">
+                    <div className={`text-[15px] font-extrabold leading-tight ${v.stock === 'sin' ? 'text-[var(--muted)] line-through' : 'text-[var(--accent2)]'}`}>{money(v.precio)}</div>
+                    {g.porUnidad && f.qty > 0 && v.stock !== 'sin' && <div className="text-[10px] text-[var(--muted)]">{money(v.precio / f.qty)} c/u</div>}
+                    {v.stock === 'poco' && <div className="text-[10px] font-bold text-orange-400">últimas unidades</div>}
+                    <div className="mt-1 flex justify-center">
+                      {v.stock === 'sin'
+                        ? <span className="text-[11px] font-semibold text-red-400">Sin stock</span>
+                        : qty === 0
+                          ? <button onClick={() => setQty(f.p, v, 1)} aria-label={`Agregar ${f.p.producto} ${v.nombre}`}
+                              className="rounded-lg bg-[var(--accent)]/12 px-2.5 py-1 text-xs font-semibold text-[var(--accent2)] ring-1 ring-[var(--accent)] active:scale-95">+ Agregar</button>
+                          : <Stepper qty={qty} onChange={(n) => setQty(f.p, v, n)} chico />}
+                    </div>
+                  </td>
+                )
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </article>
+  )
+}
+
 function Pie({ config, fecha, actualizado }) {
   const guia = []; const notas = []; const vistas = new Set()
   for (const n of config.notas || []) {
@@ -368,12 +443,13 @@ function Pie({ config, fecha, actualizado }) {
   )
 }
 
-function Stepper({ qty, onChange }) {
+function Stepper({ qty, onChange, chico }) {
+  const b = chico ? 'px-2 py-0.5' : 'px-3 py-1.5'
   return (
-    <div className="flex items-center overflow-hidden rounded-lg bg-[var(--accent)] font-bold text-black">
-      <button onClick={() => onChange(qty - 1)} className="px-3 py-1.5 active:bg-black/10" aria-label="Quitar uno">−</button>
-      <span className="min-w-6 text-center">{qty}</span>
-      <button onClick={() => onChange(qty + 1)} className="px-3 py-1.5 active:bg-black/10" aria-label="Agregar uno">+</button>
+    <div className={`flex items-center overflow-hidden rounded-lg bg-[var(--accent)] font-bold text-black ${chico ? 'text-sm' : ''}`}>
+      <button onClick={() => onChange(qty - 1)} className={`${b} active:bg-black/10`} aria-label="Quitar uno">−</button>
+      <span className="min-w-5 text-center">{qty}</span>
+      <button onClick={() => onChange(qty + 1)} className={`${b} active:bg-black/10`} aria-label="Agregar uno">+</button>
     </div>
   )
 }
