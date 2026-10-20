@@ -167,18 +167,57 @@ export default function App() {
   )
 }
 
+// Instalación PWA: Android/Chrome usa el evento beforeinstallprompt; iPhone no lo tiene y hay que explicar los pasos
+const esStandalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
+const esIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+
+function useInstalar() {
+  const [evento, setEvento] = useState(null)
+  const [instalada, setInstalada] = useState(esStandalone)
+  useEffect(() => {
+    const onPrompt = (e) => { e.preventDefault(); setEvento(e) }
+    const onInstalled = () => { setInstalada(true); setEvento(null) }
+    window.addEventListener('beforeinstallprompt', onPrompt)
+    window.addEventListener('appinstalled', onInstalled)
+    return () => { window.removeEventListener('beforeinstallprompt', onPrompt); window.removeEventListener('appinstalled', onInstalled) }
+  }, [])
+  const ios = esIOS()
+  return { visible: !instalada && (!!evento || ios), ios, instalar: async () => { if (!evento) return; evento.prompt(); await evento.userChoice; setEvento(null) } }
+}
+
 function Hero({ config, fecha, estado, refrescar }) {
+  const inst = useInstalar()
+  const [ayudaIOS, setAyudaIOS] = useState(false)
   return (
     <header className="relative overflow-hidden">
       <img src="/img/hero.webp" alt="" className="absolute inset-0 h-full w-full object-cover" />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/55 to-[var(--bg)]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/50 to-[var(--bg)]" />
       <button onClick={refrescar} aria-label="Actualizar precios"
-        className="absolute top-3 right-3 z-10 rounded-full bg-black/45 px-3 py-1.5 text-xs text-white/85 backdrop-blur active:scale-95">
+        className="absolute top-3 right-3 z-10 rounded-full bg-black/45 px-3 py-1.5 text-xs text-white/85 active:scale-95">
         {estado === 'cargando' ? 'Actualizando…' : '↻ Actualizar'}
       </button>
-      <div className="relative flex flex-col items-center px-6 pt-10 pb-7 text-center">
-        <img src="/img/logo.webp" alt="" className="h-48 w-48 rounded-[28px] shadow-[0_8px_30px_rgba(0,0,0,0.7)] ring-1 ring-[var(--accent)]/40" />
+      <div className="relative flex flex-col items-center px-6 pt-8 pb-7 text-center">
+        <img src="/img/logo-transparente.webp" alt="" className="w-64 max-w-[78vw] drop-shadow-[0_4px_14px_rgba(0,0,0,0.95)]" />
         <h1 className="sr-only">{config.negocio} — {config.slogan}</h1>
+        {inst.visible && (
+          <button onClick={() => (inst.ios ? setAyudaIOS(true) : inst.instalar())}
+            className="mt-3 rounded-full bg-[var(--accent)] px-5 py-2 text-sm font-extrabold text-black shadow-lg shadow-black/50 active:scale-95">
+            📲 Instalar app
+          </button>
+        )}
+        {ayudaIOS && (
+          <div className="fixed inset-0 z-50 flex items-end bg-black/70" onClick={() => setAyudaIOS(false)}>
+            <div className="safe-bottom w-full rounded-t-3xl bg-[var(--bg2)] p-5 text-left text-sm" onClick={(e) => e.stopPropagation()}>
+              <h2 className="text-lg font-bold">Instalar en iPhone</h2>
+              <ol className="mt-3 list-decimal space-y-2 pl-5 text-[var(--text)]">
+                <li>Abrí esta página en <b>Safari</b>.</li>
+                <li>Tocá el botón <b>Compartir</b> <span className="rounded bg-white/10 px-1.5">⬆︎</span> (abajo en la pantalla).</li>
+                <li>Elegí <b>“Agregar a pantalla de inicio”</b> y tocá <b>Agregar</b>.</li>
+              </ol>
+              <button onClick={() => setAyudaIOS(false)} className="mt-4 w-full rounded-xl bg-[var(--accent)] py-3 font-bold text-black">Entendido</button>
+            </div>
+          </div>
+        )}
         <p className="mt-3 max-w-xs text-[13px] leading-snug text-white/80">
           Hamburguesas, panchos, papas, quesos y todo para tu negocio gastronómico.
         </p>
