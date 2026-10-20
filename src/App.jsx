@@ -30,6 +30,18 @@ export default function App() {
       .catch(() => setEstado(loadCached() ? 'offline' : 'error'))
   }
   useEffect(refrescar, [])
+  // Precios siempre frescos sin botón: al volver a la app (si pasó más de 1 min) y cada 5 min con la app abierta
+  useEffect(() => {
+    let ultima = Date.now()
+    const tick = (min) => () => {
+      if (document.visibilityState !== 'visible' || Date.now() - ultima < min * 60000) return
+      ultima = Date.now()
+      loadData().then((d) => { setData(d); setEstado('ok') }).catch(() => {})
+    }
+    const alVolver = tick(1); const cada5 = setInterval(tick(5), 60000)
+    document.addEventListener('visibilitychange', alVolver)
+    return () => { document.removeEventListener('visibilitychange', alVolver); clearInterval(cada5) }
+  }, [])
   useEffect(() => store.set(LISTA_KEY, lista), [lista])
   useEffect(() => store.set(CART_KEY, cart), [cart])
 
@@ -93,7 +105,7 @@ export default function App() {
 
   return (
     <div className="mx-auto max-w-3xl pb-28">
-      <Hero config={config} fecha={fecha} estado={estado} refrescar={refrescar} />
+      <Hero config={config} fecha={fecha} />
 
       <div id="catalogo" className="sticky top-0 z-20 border-b border-[var(--line)] bg-[var(--bg)] px-4 pt-3 pb-2 shadow-lg shadow-black/40">
         <div className="grid grid-cols-2 rounded-xl bg-[var(--bg2)] p-1 text-sm font-semibold">
@@ -203,17 +215,13 @@ function useInstalar() {
   return { visible: !instalada && (!!evento || ios), ios, instalar: async () => { if (!evento) return; evento.prompt(); await evento.userChoice; setEvento(null) } }
 }
 
-function Hero({ config, fecha, estado, refrescar }) {
+function Hero({ config, fecha }) {
   const inst = useInstalar()
   const [ayudaIOS, setAyudaIOS] = useState(false)
   return (
     <header className="relative overflow-hidden">
       <img src="/img/hero.webp" alt="" className="absolute inset-0 h-full w-full object-cover" />
       <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/50 to-[var(--bg)]" />
-      <button onClick={refrescar} aria-label="Actualizar precios"
-        className="absolute top-3 right-3 z-10 rounded-full bg-black/45 px-3 py-1.5 text-xs text-white/85 active:scale-95">
-        {estado === 'cargando' ? 'Actualizando…' : '↻ Actualizar'}
-      </button>
       <div className="relative flex flex-col items-center px-6 pt-8 pb-7 text-center">
         <img src="/img/logo-transparente.webp" alt="" className="w-64 max-w-[78vw] drop-shadow-[0_4px_14px_rgba(0,0,0,0.95)]" />
         <h1 className="sr-only">{config.negocio} — {config.slogan}</h1>
