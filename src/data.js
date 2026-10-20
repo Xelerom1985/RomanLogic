@@ -46,9 +46,13 @@ async function fetchText(url) {
 }
 
 // Agrupa las filas (una por precio) en productos con sus variantes
+// La marca es "Krachitos" (así figura en su logo); en la planilla quedó como "Kranchitos"
+const fixNombre = (s) => (s || '').replace(/Kranchitos/g, 'Krachitos')
+
 export function buildCatalog(rows) {
   const productos = new Map()
-  for (const r of rows) {
+  for (const raw of rows) {
+    const r = { ...raw, Marca: fixNombre(raw.Marca), Producto: fixNombre(raw.Producto) }
     const precio = parsePrecio(r.Precio)
     const activo = String(r.Activo).toUpperCase() === 'TRUE' || r.Activo === 'VERDADERO'
     if (!activo || precio == null || precio <= 0) continue

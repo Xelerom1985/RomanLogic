@@ -11,6 +11,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon-192.png', 'icon-512.png'],
+      workbox: { globPatterns: ['**/*.{js,css,html,png,webp}'] },
       manifest: {
         name: 'Distribución ROMÁN Logic',
         short_name: 'ROMÁN Logic',
