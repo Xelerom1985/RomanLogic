@@ -3,8 +3,8 @@ import Papa from 'papaparse'
 // Google Sheets publicado como CSV (Archivo → Compartir → Publicar en la Web)
 const BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTeGIM17OcxV8CIBUFVemumuhoyL-jPgU9cMs00_j0nK9ZJQ_GrKgE4F9yxuRyF045uRTM9OKqYIU2q/pub'
 export const APP_URL = `${BASE}?gid=689900947&single=true&output=csv`
-// Completar con el gid de APP_CONFIG cuando se publique esa solapa (null = usar DEFAULT_CONFIG)
-export const CONFIG_GID = null
+// Solapa APP_CONFIG publicada (null = usar DEFAULT_CONFIG)
+export const CONFIG_GID = '335456408'
 const CONFIG_URL = CONFIG_GID ? `${BASE}?gid=${CONFIG_GID}&single=true&output=csv` : null
 
 export const DEFAULT_CONFIG = {

@@ -140,14 +140,7 @@ export default function App() {
         ))}
       </main>
 
-      {data && (
-        <footer className="mt-8 space-y-1 px-4 text-center text-[11px] text-[var(--muted)]">
-          {config.fecha_lista && <p>{config.fecha_lista}</p>}
-          <p>{config.aviso}</p>
-          {config.notas?.map((n, i) => <p key={i}>{n}</p>)}
-          <p>Actualizado: {new Date(data.actualizado).toLocaleString('es-AR')}</p>
-        </footer>
-      )}
+      {data && <Pie config={config} actualizado={data.actualizado} />}
 
       {items.length > 0 && !verPedido && (
         <button onClick={() => setVerPedido(true)}
@@ -158,6 +151,40 @@ export default function App() {
       )}
       {verPedido && <Pedido items={items} total={total} config={config} setCart={setCart} onClose={() => setVerPedido(false)} />}
     </div>
+  )
+}
+
+function Pie({ config, actualizado }) {
+  // "Lista de valores al dia 12-10 LOS VALORES PUEDEN..." -> "Lista de valores al dia 12-10"
+  const fecha = (config.fecha_lista || '').split(/\s+LOS VALORES/i)[0].trim()
+  const guia = []; const notas = []; const vistas = new Set()
+  for (const n of config.notas || []) {
+    const m = n.match(/^Gu[ií]a de tamaños:\s*(.+)$/i)
+    if (m) { guia.push(m[1].split('·').map((s) => s.trim())); continue }
+    const k = normalize(n).replace(/[^a-z0-9]/g, '')
+    if ([...vistas].some((v) => v.includes(k) || k.includes(v))) continue
+    vistas.add(k); notas.push(n)
+  }
+  return (
+    <footer className="mt-8 space-y-3 px-4 text-center text-[11px] text-[var(--muted)]">
+      {notas.length > 0 && (
+        <div className="flex flex-wrap justify-center gap-2">
+          {notas.map((n, i) => <span key={i} className="rounded-full border border-[var(--line)] px-2.5 py-1">{n}</span>)}
+        </div>
+      )}
+      {guia.length > 0 && (
+        <table className="mx-auto text-left">
+          <caption className="mb-1 font-semibold text-[var(--text)]">Guía de tamaños</caption>
+          <thead><tr className="text-[var(--accent)]"><th className="pr-4">Gramos</th><th className="pr-4">Diámetro</th><th>Grosor</th></tr></thead>
+          <tbody>{guia.map((g, i) => <tr key={i}>{g.map((c, j) => <td key={j} className="pr-4">{c}</td>)}</tr>)}</tbody>
+        </table>
+      )}
+      <div className="space-y-0.5">
+        {fecha && <p className="text-[var(--text)]">{fecha}</p>}
+        <p>{config.aviso}</p>
+        <p>Actualizado: {new Date(actualizado).toLocaleString('es-AR')}</p>
+      </div>
+    </footer>
   )
 }
 
