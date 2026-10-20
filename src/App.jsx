@@ -240,14 +240,25 @@ function Hero({ config, fecha, estado, refrescar }) {
           Hamburguesas, panchos, papas, quesos y todo para tu negocio gastronómico.
         </p>
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-          <a href={`https://wa.me/${config.whatsapp}`} target="_blank" rel="noreferrer"
-            className="rounded-full bg-[var(--wa)] px-4 py-2 text-sm font-bold text-black shadow-lg active:scale-95">
-            Consultanos por WhatsApp
-          </a>
           {fecha && <span className="rounded-full border border-white/25 bg-black/30 px-3 py-1.5 text-xs text-white/85">{fecha}</span>}
+          <a href={`https://wa.me/${config.whatsapp}`} target="_blank" rel="noreferrer" aria-label="Consultanos por WhatsApp" title="Consultanos por WhatsApp"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-white/25 bg-black/30 active:scale-95">
+            <IconoWhatsApp className="h-[18px] w-[18px] text-[var(--wa)]" />
+          </a>
         </div>
       </div>
     </header>
+  )
+}
+
+function IconoWhatsApp({ className }) {
+  return (
+    <svg viewBox="0 0 32 32" className={className} aria-hidden="true">
+      <path fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round"
+        d="M16 3.5C9.1 3.5 3.5 9 3.5 15.8c0 2.4.7 4.6 1.9 6.5L4 28.5l6.4-1.7c1.7.9 3.6 1.4 5.6 1.4 6.9 0 12.5-5.5 12.5-12.4S22.9 3.5 16 3.5z" />
+      <path fill="currentColor"
+        d="M11.4 9.6c.3-.7.7-.7 1-.7h.8c.3 0 .6 0 .8.6l1.1 2.7c.1.3.1.5-.1.8l-.7.9c-.2.2-.3.5-.1.8.9 1.5 2.1 2.7 3.6 3.5.3.2.6.1.8-.1l.9-1.1c.2-.3.5-.3.8-.2l2.6 1.2c.3.1.5.3.5.6 0 .6-.2 1.8-1 2.5-.9.7-2.4 1.1-4.4.4-2.5-.9-5-3.2-6.2-5.5-1.1-2.2-.8-4-.4-5.3z" />
+    </svg>
   )
 }
 
