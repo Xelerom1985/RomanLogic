@@ -35,7 +35,7 @@ export default function App() {
   useEffect(() => {
     if (!data) return
     const vigentes = new Map()
-    for (const p of data.productos) for (const v of p.variantes) vigentes.set(v.id, v.precio)
+    for (const p of data.productos) for (const v of p.variantes) if (v.stock !== 'sin') vigentes.set(v.id, v.precio)
     setCart((c) => {
       const n = {}
       for (const [id, it] of Object.entries(c)) if (vigentes.has(id)) n[id] = { ...it, precio: vigentes.get(id) }
@@ -288,7 +288,7 @@ function BannerCategoria({ cat, n }) {
 function Producto({ p, cart, setQty }) {
   const logos = logosDe(p.marca)
   return (
-    <article className="flex gap-3 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-3">
+    <article className={`flex gap-3 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-3 ${p.stock === 'sin' ? 'opacity-55 grayscale-[60%]' : ''}`}>
       <div className="flex w-16 shrink-0 flex-col gap-1.5">
         {logos.length ? logos.map((l) => (
           <div key={l} className="flex h-14 items-center justify-center rounded-xl bg-white p-1.5">
@@ -299,6 +299,8 @@ function Producto({ p, cart, setQty }) {
         )}
       </div>
       <div className="min-w-0 flex-1">
+        {p.stock === 'sin' && <span className="mb-1 inline-block rounded-md bg-red-600 px-2 py-0.5 text-[11px] font-bold uppercase text-white">Sin stock</span>}
+        {p.stock === 'poco' && <span className="mb-1 inline-block rounded-md bg-orange-500 px-2 py-0.5 text-[11px] font-bold uppercase text-black">¡Últimas unidades!</span>}
         <h3 className="text-[15px] font-semibold leading-snug">{p.producto}</h3>
         {(p.marca || p.detalle) && (
           <p className="mt-0.5 text-xs text-[var(--muted)]">{[p.marca, p.detalle].filter(Boolean).join(' · ')}</p>
@@ -310,9 +312,12 @@ function Producto({ p, cart, setQty }) {
               <li key={v.id} className="flex items-center justify-between gap-2 py-1.5">
                 <div className="min-w-0">
                   <span className="text-xs text-[var(--muted)]">{v.nombre}</span>
-                  <div className="text-[17px] font-extrabold text-[var(--accent2)]">{money(v.precio)}</div>
+                  {v.stock === 'poco' && p.stock !== 'poco' && <span className="ml-1.5 text-[10px] font-bold text-orange-400">· últimas unidades</span>}
+                  <div className={`text-[17px] font-extrabold ${v.stock === 'sin' ? 'text-[var(--muted)] line-through' : 'text-[var(--accent2)]'}`}>{money(v.precio)}</div>
                 </div>
-                {qty === 0 ? (
+                {v.stock === 'sin' ? (
+                  <span className="rounded-lg bg-red-600/15 px-3 py-1.5 text-sm font-semibold text-red-400 ring-1 ring-red-600/60">Sin stock</span>
+                ) : qty === 0 ? (
                   <button onClick={() => setQty(p, v, 1)} aria-label={`Agregar ${p.producto} ${v.nombre}`}
                     className="rounded-lg bg-[var(--accent)]/12 px-3 py-1.5 text-sm font-semibold text-[var(--accent2)] ring-1 ring-[var(--accent)] active:scale-95">
                     + Agregar

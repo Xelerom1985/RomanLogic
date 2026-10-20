@@ -49,6 +49,15 @@ async function fetchText(url) {
 // La marca es "Krachitos" (así figura en su logo); en la planilla quedó como "Kranchitos"
 const fixNombre = (s) => (s || '').replace(/Kranchitos/g, 'Krachitos')
 
+// Columna opcional "Stock" de APP: vacío = disponible, "SIN STOCK" (o "sin", "agotado", "no"), "POCO STOCK" (o "poco", "últimas")
+export function parseStock(s) {
+  const t = normalize(s).trim()
+  if (!t) return ''
+  if (/sin|agotad|^no$|^0$|falta/.test(t)) return 'sin'
+  if (/poco|ultim|bajo/.test(t)) return 'poco'
+  return ''
+}
+
 export function buildCatalog(rows) {
   const productos = new Map()
   for (const raw of rows) {
@@ -63,7 +72,11 @@ export function buildCatalog(rows) {
         detalle: r.Detalle, unidad: r.Unidad, orden: Number(r.Orden) || 0, variantes: [],
       })
     }
-    productos.get(key).variantes.push({ id: r.ID, nombre: r.Variante, precio, unidad: r.Unidad })
+    productos.get(key).variantes.push({ id: r.ID, nombre: r.Variante, precio, unidad: r.Unidad, stock: parseStock(r.Stock) })
+  }
+  for (const p of productos.values()) {
+    const s = p.variantes.map((v) => v.stock)
+    p.stock = s.every((x) => x === 'sin') ? 'sin' : s.every((x) => x === 'poco') ? 'poco' : ''
   }
   const catIdx = (c) => { const i = CATEGORIAS.indexOf(c); return i < 0 ? 99 : i }
   return [...productos.values()].sort((a, b) => catIdx(a.categoria) - catIdx(b.categoria) || a.orden - b.orden)
@@ -90,8 +103,14 @@ export async function loadData() {
     fetchText(APP_URL),
     CONFIG_URL ? fetchText(CONFIG_URL).catch(() => null) : Promise.resolve(null),
   ])
+  const filas = csv(appText)
+  // Solo en desarrollo (?demoStock): simula la columna Stock para ver cómo queda antes de cargarla en el Sheet
+  if (import.meta.env.DEV && new URLSearchParams(location.search).has('demoStock')) {
+    const demo = { 'LISTASPDF!F11': 'SIN STOCK', 'LISTASPDF!G11': 'SIN STOCK', 'LISTASPDF!F12': 'POCO STOCK', 'LISTASPDF!G13': 'SIN STOCK' }
+    for (const f of filas) if (demo[f.Origen]) f.Stock = demo[f.Origen]
+  }
   const data = {
-    productos: buildCatalog(csv(appText)),
+    productos: buildCatalog(filas),
     config: cfgText ? parseConfig(csv(cfgText)) : { ...DEFAULT_CONFIG, notas: [] },
     actualizado: new Date().toISOString(),
   }
